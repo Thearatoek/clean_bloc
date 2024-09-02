@@ -2,26 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:todo_app_clean_bloc_test/domain/usecase/get_current_weather_usecase.dart';
+import 'package:todo_app_clean_bloc_test/helper/utils/appUtil.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_event.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_state.dart';
-import 'package:todo_app_clean_bloc_test/shared/constants/url_constants.dart';
 
 @Injectable()
-class BlocBloc extends Bloc<CurrentWeatherEvent, CurrentState> {
-  BlocBloc(this._getCurrentWeatherUsecase) : super(CurrentState()) {
+class WeatherBloc extends Bloc<WeatherEvent, WeattherState> {
+  WeatherBloc(this._getCurrentWeatherUsecase) : super(WeatherInitState()) {
     on<CurrentWeatherEvent>(_onGetCurrentWeather);
   }
   final GetCurrentWeatherUsecase _getCurrentWeatherUsecase;
 
-  Future _onGetCurrentWeather(
-      CurrentWeatherEvent event, Emitter<CurrentState> emit) async {
-    final output = await _getCurrentWeatherUsecase.execute(
-      GetCurrentWeatherUsecaseInput(zipCountryCode: event.zipCountryCode),
-    );
+  Future<void> _onGetCurrentWeather(
+      CurrentWeatherEvent event, Emitter<WeattherState> emit) async {
+    try {
+      emit(
+        WeatherInitState(),
+      );
 
-    emit(state.copyWith(currentWeatherModel: output.currentWeatherModel));
-    print(UrlConstants.currentWeather
-        .replaceAll("{zipCode}", "?q=120012&key=${UrlConstants.apiKey}"));
-    return output;
+      final output = await _getCurrentWeatherUsecase.execute(
+        GetCurrentWeatherUsecaseInput(zipCountryCode: event.zipCountryCode),
+      );
+
+      emit(
+        CurrentState(currentWeatherModel: output.currentWeatherModel),
+      );
+      AppUtil.hideLoading();
+    } catch (e) {
+      debugPrint("Error: $e");
+    }
   }
 }

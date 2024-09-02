@@ -1,60 +1,227 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:todo_app_clean_bloc_test/domain/entity/product_model.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_bloc.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_event.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_state.dart';
 
-import '../helper/service_locator/di.dart';
-
-class MYCurrentWeatherScreen extends StatefulWidget {
-  const MYCurrentWeatherScreen({super.key});
+class CurrentWeatherScreen extends StatefulWidget {
+  const CurrentWeatherScreen({super.key});
 
   @override
-  State<MYCurrentWeatherScreen> createState() => _MYCurrentWeatherScreenState();
+  _CurrentWeatherScreenState createState() => _CurrentWeatherScreenState();
 }
 
-class _MYCurrentWeatherScreenState extends State<MYCurrentWeatherScreen> {
+class _CurrentWeatherScreenState extends State<CurrentWeatherScreen> {
+  CurrentWeatherModel? currentModel;
+
   @override
   void initState() {
     super.initState();
+    BlocProvider.of<WeatherBloc>(context).add(
+      CurrentWeatherEvent(zipCountryCode: "11211"),
+    );
   }
 
-  final bloc = getIt.get<BlocBloc>();
+  bool isLoaing = false;
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<BlocBloc>(
-      create: (context) => getIt.get<BlocBloc>(),
-      child: Scaffold(
-          appBar: AppBar(
-            title: const Text("Back"),
-            leading: const Icon(Icons.arrow_back_ios),
-          ),
-          body: BlocListener<BlocBloc, CurrentState>(
-            listener: (context, state) {},
-            child: InkWell(
-              onTap: () {
-                bloc.add(CurrentWeatherEvent(zipCountryCode: "120101"));
-              },
+    return Scaffold(
+      body: BlocListener<WeatherBloc, WeattherState>(
+        listener: (context, state) {
+          if (state is WeatherInitState) {
+            isLoaing = true;
+          }
+          if (state is CurrentState) {
+            setState(() {
+              currentModel = state.currentWeatherModel;
+              debugPrint("Current Model: $currentModel");
+            });
+            Future.delayed(const Duration(seconds: 1), () {
+              setState(() {
+                isLoaing = false;
+              });
+            });
+          }
+        },
+        child: Stack(
+          children: [
+            Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/sky.jpeg"),
+                  fit: BoxFit.cover,
+                ),
+              ),
               child: Column(
                 children: [
-                  const SizedBox(
-                    height: 120,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 40),
-                    child: Container(
-                      width: 120,
-                      height: 50,
-                      color: Colors.red,
-                      child: const Center(
-                        child: Text("Get Current Weather"),
+                  const SizedBox(height: 70),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 20),
+                    child: InkWell(
+                      child: Center(
+                        child: Icon(
+                          Icons.location_on_outlined,
+                          size: 40,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  )
+                  ),
+                  Text(
+                    currentModel?.location?.region ?? "",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    currentModel?.current?.lastUpdated?.substring(0,
+                            currentModel!.current!.lastUpdated!.length - 5) ??
+                        "",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Icon(
+                    Icons.sunny,
+                    size: 50,
+                    color: Colors.yellow,
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: Text(
+                      '${currentModel?.current?.tempC} ^C',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        _showCustomBottomSheet(
+                          context,
+                          wid: _buildWeatherTem(
+                              tem: "12", val: "32", icon: Icons.abc),
+                        );
+                      },
+                      child: Container(
+                        width: 200,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                          ),
+                          color: Colors.blue,
+                        ),
+                        child: const Center(
+                          child: Text("View Details"),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          )),
+            if (isLoaing)
+              SizedBox(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              )
+          ],
+        ),
+      ),
     );
   }
+}
+
+void _showCustomBottomSheet(BuildContext context, {required Widget wid}) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return ClipPath(
+        clipper: BottomClipper(),
+        child: Container(
+            height: MediaQuery.of(context).size.height / 2,
+            color: Colors.white,
+            child: wid),
+      );
+    },
+  );
+}
+
+// design clippath widget with height 300 width full and position bottom
+class BottomClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, 70);
+    path.quadraticBezierTo(size.width / 2, 0, size.width, 40);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
+    return false;
+  }
+}
+
+Widget _buildWeatherTem(
+    {required String tem, required String val, required IconData icon}) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 20),
+    child: Row(
+      children: [
+        Text(
+          tem,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Icon(
+            icon,
+            color: Colors.blue,
+            size: 28,
+          ),
+        ),
+        Text(
+          val,
+          style: const TextStyle(
+            color: Colors.blue,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
 }

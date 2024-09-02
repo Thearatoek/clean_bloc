@@ -15,6 +15,6 @@ class GetCurrentWeatherRepositoryimp implements GetCurrentWeatherRepository {
     final response = await _getCurrentWeatherService.getCurrentWeather(
         zipCode: zipCountryCode);
     debugPrint("response $response");
-    return CurrentWeatherModel.fromJson(response as Map<String, dynamic>);
+    return CurrentWeatherModel.fromJson(response);
   }
 }

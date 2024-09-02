@@ -5,8 +5,8 @@ import 'package:todo_app_clean_bloc_test/data/repository/api/dio_builder.dart';
 import 'package:todo_app_clean_bloc_test/shared/constants/url_constants.dart';
 
 @LazySingleton()
-class GetCurrentWeather extends RestApiClient {
-  GetCurrentWeather(
+class GetCurrentWeatherClient extends RestApiClient {
+  GetCurrentWeatherClient(
     HeaderInterceptor headerInterceptor,
     AccessTokenInterceptor accessTokenInterceptor,
   ) : super(
@@ -14,10 +14,7 @@ class GetCurrentWeather extends RestApiClient {
             options: BaseOptions(
               baseUrl: UrlConstants.domainApiBaseUrl,
             ),
-            interceptors: [
-              headerInterceptor,
-              accessTokenInterceptor,
-            ],
+            interceptors: [],
           ),
         );
 }

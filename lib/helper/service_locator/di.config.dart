@@ -16,7 +16,7 @@ import 'package:todo_app_clean_bloc_test/data/repository/api/base/connectivity_i
     as _i770;
 import 'package:todo_app_clean_bloc_test/data/repository/api/dio_builder.dart'
     as _i152;
-import 'package:todo_app_clean_bloc_test/data/repository/api/get_product_api_client.dart'
+import 'package:todo_app_clean_bloc_test/data/repository/api/client/get_product_api_client.dart'
     as _i129;
 import 'package:todo_app_clean_bloc_test/data/repository/service/get_current_weather_service.dart'
     as _i774;
@@ -46,20 +46,21 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i725.LocalDataStore>(() => _i725.LocalDataStore());
     gh.factory<_i152.AccessTokenInterceptor>(
         () => _i152.AccessTokenInterceptor(gh<_i725.LocalDataStore>()));
-    gh.lazySingleton<_i129.GetCurrentWeather>(() => _i129.GetCurrentWeather(
-          gh<_i152.HeaderInterceptor>(),
-          gh<_i152.AccessTokenInterceptor>(),
-        ));
-    gh.lazySingleton<_i774.GetCurrentWeatherService>(
-        () => _i774.GetCurrentWeatherService(gh<_i129.GetCurrentWeather>()));
+    gh.lazySingleton<_i129.GetCurrentWeatherClient>(
+        () => _i129.GetCurrentWeatherClient(
+              gh<_i152.HeaderInterceptor>(),
+              gh<_i152.AccessTokenInterceptor>(),
+            ));
+    gh.lazySingleton<_i774.GetCurrentWeatherService>(() =>
+        _i774.GetCurrentWeatherService(gh<_i129.GetCurrentWeatherClient>()));
     gh.factory<_i858.GetCurrentWeatherRepository>(() =>
         _i935.GetCurrentWeatherRepositoryimp(
             gh<_i774.GetCurrentWeatherService>()));
     gh.factory<_i757.GetCurrentWeatherUsecase>(() =>
         _i757.GetCurrentWeatherUsecase(
             gh<_i858.GetCurrentWeatherRepository>()));
-    gh.factory<_i883.BlocBloc>(
-        () => _i883.BlocBloc(gh<_i757.GetCurrentWeatherUsecase>()));
+    gh.factory<_i883.WeatherBloc>(
+        () => _i883.WeatherBloc(gh<_i757.GetCurrentWeatherUsecase>()));
     return this;
   }
 }
