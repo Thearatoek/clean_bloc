@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.example.bloc_clean_app",
+            "sha256_cert_fingerprints": [
+                "16:AE:C7:57:9D:D3:06:71:E3:42:8B:3B:92:12:80:C2:15:C4:C7:09:3E:E7:7C:9D:33:F4:B8:37:B6:6F:BE:16"
+            ]
+        }
+    }
+]

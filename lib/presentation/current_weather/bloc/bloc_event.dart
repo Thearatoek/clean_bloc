@@ -9,3 +9,5 @@ class CurrentWeatherEvent extends WeatherEvent with _$CurrentWeatherEvent {
   factory CurrentWeatherEvent({required String zipCountryCode}) =
       _CurrentWeatherEvent;
 }
+
+class AppInit extends WeatherEvent {}

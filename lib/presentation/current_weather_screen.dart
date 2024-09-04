@@ -1,10 +1,14 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:todo_app_clean_bloc_test/domain/entity/product_model.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_bloc.dart';
-import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_event.dart';
 import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_state.dart';
 
 class CurrentWeatherScreen extends StatefulWidget {
@@ -16,13 +20,61 @@ class CurrentWeatherScreen extends StatefulWidget {
 
 class _CurrentWeatherScreenState extends State<CurrentWeatherScreen> {
   CurrentWeatherModel? currentModel;
+  final _appLink = AppLinks();
+  String hello = '';
 
   @override
   void initState() {
     super.initState();
-    BlocProvider.of<WeatherBloc>(context).add(
-      CurrentWeatherEvent(zipCountryCode: "11211"),
-    );
+    _disableScreenshot();
+  }
+
+  void _handleIncomingLinks() {
+    _appLink.uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        // Handle the deep link here
+        hello = uri.pathSegments.toString();
+        print('Received deep link: $uri');
+        // You can navigate to different screens based on the URI
+        if (uri.path == '/path') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+            ),
+          );
+        }
+      }
+    }, onError: (Object err) {
+      // Handle error
+      print('Failed to receive deep link: $err');
+    });
+  }
+
+  static const androidChannel = MethodChannel('com.clean_code');
+
+  Future<void> _invokeKotlinFunction() async {
+    try {
+      final String result = await androidChannel.invokeMethod('onInvoke');
+      print('Result from Kotlin: $result');
+    } on PlatformException catch (e) {
+      print('Failed to invoke Kotlin function: ${e.message}');
+    }
+  }
+
+  static const isoChannel = MethodChannel('com.clean_code/channel');
+  Future<void> _disableScreenshot() async {
+    try {
+      await isoChannel.invokeMethod('disableScreenshot');
+      print('Screenshot disabled');
+    } on PlatformException catch (e) {
+      print('Failed to disable screenshot: ${e.message}');
+    }
+  }
+
+  void disable() async {
+    await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+    print("screen is disable");
   }
 
   bool isLoaing = false;
@@ -92,10 +144,19 @@ class _CurrentWeatherScreenState extends State<CurrentWeatherScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Icon(
-                    Icons.sunny,
-                    size: 50,
-                    color: Colors.yellow,
+                  InkWell(
+                    onTap: () {
+                      if (Platform.isAndroid) {
+                        _invokeKotlinFunction();
+                      } else {
+                        _disableScreenshot();
+                      }
+                    },
+                    child: const Icon(
+                      Icons.sunny,
+                      size: 50,
+                      color: Colors.yellow,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Expanded(
@@ -224,4 +285,20 @@ Widget _buildWeatherTem(
       ],
     ),
   );
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text(
+          "Home",
+          style: TextStyle(fontSize: 30, color: Colors.red),
+        ),
+      ),
+    );
+  }
 }

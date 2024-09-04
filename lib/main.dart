@@ -9,7 +9,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   configureInjection();
-
   await dotenv.load(fileName: 'assets/.env');
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
