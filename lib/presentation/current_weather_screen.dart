@@ -1,15 +1,12 @@
-import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 
-import 'package:app_links/app_links.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:todo_app_clean_bloc_test/domain/entity/product_model.dart';
-import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_bloc.dart';
-import 'package:todo_app_clean_bloc_test/presentation/current_weather/bloc/bloc_state.dart';
+import 'package:todo_app_clean_bloc_test/domain/usecase/firebase/firebase_messaging.dart';
+import 'package:todo_app_clean_bloc_test/presentation/scan/qr_scan_screen.dart';
+
+enum FloatButtonType { home, scan, profile }
 
 class CurrentWeatherScreen extends StatefulWidget {
   const CurrentWeatherScreen({super.key});
@@ -20,217 +17,141 @@ class CurrentWeatherScreen extends StatefulWidget {
 
 class _CurrentWeatherScreenState extends State<CurrentWeatherScreen> {
   CurrentWeatherModel? currentModel;
-  final _appLink = AppLinks();
-  String hello = '';
+  final PageController pageController =
+      PageController(initialPage: 0, viewportFraction: 1);
 
+  final pushToken = FirebaseMessaging;
   @override
   void initState() {
     super.initState();
-    _disableScreenshot();
+    FirebaseNotificationHandler.setupFirebaseMessaging();
+    _getPushToken();
   }
 
-  void _handleIncomingLinks() {
-    _appLink.uriLinkStream.listen((Uri? uri) {
-      if (uri != null) {
-        // Handle the deep link here
-        hello = uri.pathSegments.toString();
-        print('Received deep link: $uri');
-        // You can navigate to different screens based on the URI
-        if (uri.path == '/path') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            ),
-          );
-        }
-      }
-    }, onError: (Object err) {
-      // Handle error
-      print('Failed to receive deep link: $err');
-    });
+  String? token = '';
+  Future<void> _getPushToken() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    token = await messaging.getToken();
+    debugPrint("Message token: $token");
   }
 
-  static const androidChannel = MethodChannel('com.clean_code');
-
-  Future<void> _invokeKotlinFunction() async {
-    try {
-      final String result = await androidChannel.invokeMethod('onInvoke');
-      print('Result from Kotlin: $result');
-    } on PlatformException catch (e) {
-      print('Failed to invoke Kotlin function: ${e.message}');
-    }
-  }
-
-  static const isoChannel = MethodChannel('com.clean_code/channel');
-  Future<void> _disableScreenshot() async {
-    try {
-      await isoChannel.invokeMethod('disableScreenshot');
-      print('Screenshot disabled');
-    } on PlatformException catch (e) {
-      print('Failed to disable screenshot: ${e.message}');
-    }
-  }
-
-  void disable() async {
-    await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
-    print("screen is disable");
-  }
+  int pageViewIndex = 0;
 
   bool isLoaing = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<WeatherBloc, WeattherState>(
-        listener: (context, state) {
-          if (state is WeatherInitState) {
-            isLoaing = true;
-          }
-          if (state is CurrentState) {
-            setState(() {
-              currentModel = state.currentWeatherModel;
-              debugPrint("Current Model: $currentModel");
-            });
-            Future.delayed(const Duration(seconds: 1), () {
-              setState(() {
-                isLoaing = false;
-              });
-            });
-          }
+      backgroundColor: Colors.transparent,
+      body: PageView(
+        controller: pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (value) {
+          pageViewIndex = value;
         },
-        child: Stack(
-          children: [
-            Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/images/sky.jpeg"),
-                  fit: BoxFit.cover,
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.red,
+          ),
+          const QRScreen(),
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.green,
+          ),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(70),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  height: 70,
+                  width: MediaQuery.of(context).size.width - 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(70),
+                    color: Theme.of(context).cardColor.withOpacity(0.5),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      buidBottomBarWidget(
+                          title: "Home",
+                          type: FloatButtonType.home,
+                          image: "assets/images/home.png"),
+                      buidBottomBarWidget(
+                          title: "Scan",
+                          type: FloatButtonType.scan,
+                          image: "assets/images/qr-code.png"),
+                      buidBottomBarWidget(
+                          title: "Profile",
+                          type: FloatButtonType.profile,
+                          image: "assets/images/user.png"),
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 70),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 20),
-                    child: InkWell(
-                      child: Center(
-                        child: Icon(
-                          Icons.location_on_outlined,
-                          size: 40,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    currentModel?.location?.region ?? "",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    currentModel?.current?.lastUpdated?.substring(0,
-                            currentModel!.current!.lastUpdated!.length - 5) ??
-                        "",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  InkWell(
-                    onTap: () {
-                      if (Platform.isAndroid) {
-                        _invokeKotlinFunction();
-                      } else {
-                        _disableScreenshot();
-                      }
-                    },
-                    child: const Icon(
-                      Icons.sunny,
-                      size: 50,
-                      color: Colors.yellow,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: Text(
-                      '${currentModel?.current?.tempC} ^C',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: GestureDetector(
-                      onTap: () {
-                        _showCustomBottomSheet(
-                          context,
-                          wid: _buildWeatherTem(
-                              tem: "12", val: "32", icon: Icons.abc),
-                        );
-                      },
-                      child: Container(
-                        width: 200,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(12),
-                            bottomLeft: Radius.circular(12),
-                          ),
-                          color: Colors.blue,
-                        ),
-                        child: const Center(
-                          child: Text("View Details"),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
-            if (isLoaing)
-              SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              )
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-}
 
-void _showCustomBottomSheet(BuildContext context, {required Widget wid}) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return ClipPath(
-        clipper: BottomClipper(),
-        child: Container(
-            height: MediaQuery.of(context).size.height / 2,
-            color: Colors.white,
-            child: wid),
-      );
-    },
-  );
+  Widget buidBottomBarWidget(
+      {required String title,
+      required FloatButtonType type,
+      required String image}) {
+    bool isActive = FloatButtonType.values[pageViewIndex] == type;
+    return GestureDetector(
+      onTap: () {
+        switch (type) {
+          case FloatButtonType.home:
+            if (pageViewIndex != 0) {
+              pageViewIndex = 0;
+              setState(() {});
+              pageController.jumpToPage(0);
+            }
+          case FloatButtonType.scan:
+            pageViewIndex = 1;
+            setState(() {});
+            pageController.jumpToPage(1);
+
+          case FloatButtonType.profile:
+            pageViewIndex = 2;
+            setState(() {});
+            pageController.jumpToPage(2);
+        }
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: isActive ? 22 : 20,
+            height: isActive ? 22 : 20,
+            child: Image.asset(image),
+          ),
+          const SizedBox(
+            height: 5,
+          ),
+          Text(
+            title,
+            style: TextStyle(
+                fontSize: isActive ? 13 : 12,
+                color: isActive ? Colors.black : Colors.white.withOpacity(0.7)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // design clippath widget with height 300 width full and position bottom
@@ -250,41 +171,6 @@ class BottomClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) {
     return false;
   }
-}
-
-Widget _buildWeatherTem(
-    {required String tem, required String val, required IconData icon}) {
-  return Padding(
-    padding: const EdgeInsets.only(left: 20),
-    child: Row(
-      children: [
-        Text(
-          tem,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Icon(
-            icon,
-            color: Colors.blue,
-            size: 28,
-          ),
-        ),
-        Text(
-          val,
-          style: const TextStyle(
-            color: Colors.blue,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class HomeScreen extends StatelessWidget {
